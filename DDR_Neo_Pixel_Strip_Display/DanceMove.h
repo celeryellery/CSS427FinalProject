@@ -24,6 +24,7 @@ public:
   void updateDanceMove();   // moves the DanceMove instruction to the next LED on the strip
   bool getExpired() const;  // check if the DanceMove has expired
   uint8_t getColor() const;
+  bool isSteppedOn(uint8_t);    // returns whether this DanceMove was successfully stepped on
   
 private:
   Adafruit_NeoPixel* strip; // Neo Pixel strip being used for the DDR game

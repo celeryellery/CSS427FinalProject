@@ -44,14 +44,8 @@ void DanceMove::updateDanceMove()
 {
   if (!isExpired)
   {
-     // turn off the previous pixel or set it back to white if in the Dance Zone
-     if (danceMovePosition >= lowerBound && danceMovePosition <= upperBound)
-	strip->setPixelColor(danceMovePosition++, 64, 64, 64);
-     else
-	strip->setPixelColor(danceMovePosition++, 0, 0, 0);
-     
      // turn on the current pixel
-     strip->setPixelColor(danceMovePosition, Wheel(color));
+     strip->setPixelColor(++danceMovePosition, Wheel(color));
      
      // remove DanceMove when it moves past the end of the Neo Pixel strip
      if (danceMovePosition > NUM_LEDS - 1)
@@ -91,7 +85,7 @@ void DanceMove::setExpired()
 // -----------------------------------------------------------------------------
 bool DanceMove::getExpired() const
 {
-	return isExpired;
+  return isExpired;
 }
 
 // -----------------------------------------------------------------------------
@@ -100,4 +94,27 @@ bool DanceMove::getExpired() const
 uint8_t DanceMove::getColor() const
 { 
   return color; 
+}
+
+// -----------------------------------------------------------------------------
+// isSteppedOn function. This function determines if the DanceMove was stepped
+// on by comparing the player input to the color of the DanceMove. If they match
+// then the DanceMove is set to expire and the function returns true.
+// -----------------------------------------------------------------------------
+bool DanceMove::isSteppedOn(uint8_t c)
+{
+    if (isExpired)
+      return false;
+      
+    // the DanceMove can only be stepped on if it is within the DanceMove zone
+    if (danceMovePosition >= lowerBound && danceMovePosition <= upperBound)
+    {
+       if (c == color)
+       {
+          setExpired();
+          return true;
+       } 
+    }
+    
+    return false;
 }
