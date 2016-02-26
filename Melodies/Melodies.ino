@@ -14,6 +14,12 @@
 #include "pitches.h"
 #include <CapacitiveSensor.h>
 
+const int sensor1pin = 8; // connect the first sensor to pin 8 on the Arduino Mega
+//const int sensor2pin = 8; // connect the first sensor to pin 8 on the Arduino Mega
+//const int sensor3pin = 8; // connect the first sensor to pin 8 on the Arduino Mega
+//const int sensor4pin = 8; // connect the first sensor to pin 8 on the Arduino Mega
+//const int sensor5pin = 8; // connect the first sensor to pin 8 on the Arduino Mega
+
 // Original Melody--------------------------------------------------------------
 int melody1Code = 1;
 // notes in the melody:
@@ -59,7 +65,7 @@ int melody3Length = 41;
 int melody3Counter = 0;
 //-------------------------------------------------------------------------------
 
-int long stepThreshhold = 4000;
+int long stepThreshhold = 200;
 
 CapacitiveSensor   cs_4_2 = CapacitiveSensor(4,2);        // 10M resistor between pins 4 & 2, pin 2 is sensor pin, add a wire and or foil if desired
 //CapacitiveSensor   cs_1_0 = CapacitiveSensor(1,0);        // 10M resistor between pins 1 & 0, pin 0 is sensor pin, add a wire and or foil if desired
@@ -81,35 +87,58 @@ void setup() {
    //cs_10_9.set_CS_AutocaL_Millis(0xFFFFFFFF); 
    //cs_12_11.set_CS_AutocaL_Millis(0xFFFFFFFF); 
    Serial.begin(9600);
+
+   pinMode(sensor1pin, OUTPUT);
+   //pinMode(sensor2pin, OUTPUT);
+   //pinMode(sensor3pin, OUTPUT);
+   //pinMode(sensor4pin, OUTPUT);
+   //pinMode(sensor5pin, OUTPUT);
 }
 
 boolean isSteppedOn(long pressurePlateValue) {
   return (pressurePlateValue > stepThreshhold);
 }
 
-void playNextNote(int noteDurations[], int melodyCounter, int melody[], int melodyLength) {
+int playNextNote(int noteDurations[], int melodyCounter, int melody[], int melodyLength) {
       // to calculate the note duration, take one second
       // divided by the note type.
       //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
       int noteDuration = 1000 / noteDurations[melodyCounter];
-      tone(melodyLength, melody[melodyCounter], noteDuration);
+      tone(sensor1pin, melody[melodyCounter], noteDuration); 
   
       // to distinguish the notes, set a minimum time between them.
       // the note's duration + 30% seems to work well:
       int pauseBetweenNotes = noteDuration * 1.30;
       delay(pauseBetweenNotes);
       // stop the tone playing:
-      noTone(melodyLength);
-      
+      noTone(sensor1pin);
+
       if (melodyCounter < melodyLength){
         melodyCounter++;
       }
       else {
         melodyCounter = 0;
       }
+      
+      return melodyCounter;
 }
+//-----------------------Temporary code to alternate songs until we set things up to take user input instead -------------------------
+int songArray[] = {1, 1, 1, 1, 1, 1, 1, 1, // temporary; just used to switch up which song is next until we take user input for this
+                     2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 
+                     3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 
+                     3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3}; 
+int whichSong = 0;
 
-int whichSong = 1; // temporary; just used to switch up which song is next until we take user input for this
+void incrementWhichSong() {
+      // temporary loop used to change songs until we take user input to do this
+    if (whichSong < 66){
+        whichSong++;
+      }
+      else {
+        whichSong = 0;
+      }
+}
+// end temporary code ------------------------------------------------------------------------------------------------------------------
 
 void loop() {
     // Take a reading from each sensor
@@ -121,7 +150,7 @@ void loop() {
 
     // Print that reading for debugging purposes
     Serial.print("Value1: ");
-    Serial.print(total1);
+    Serial.println(total1);
     /*
     Serial.print("Value2: ");
     Serial.print(total2);
@@ -135,27 +164,22 @@ void loop() {
     // If a step is detected, play the next note in the song
     if (isSteppedOn(total1)){
       Serial.println("Stepped on!");
-      switch(whichSong) {
+      switch(songArray[whichSong]) { // Will need to change the variable here to take user input
           case 1 : 
-          playNextNote(noteDurations1, melody1Counter, melody1, melody1Length);
+          melody1Counter = playNextNote(noteDurations1, melody1Counter, melody1, melody1Length);
+          incrementWhichSong(); // temporary -- remove later when taking user input instead
           break;
 
           case 2 : 
-          playNextNote(noteDurations2, melody2Counter, melody2, melody2Length);
+          melody2Counter = playNextNote(noteDurations2, melody2Counter, melody2, melody2Length);
+          incrementWhichSong(); // temporary -- remove later when taking user input instead
           break;
 
           case 3 :
-          playNextNote(noteDurations3, melody3Counter, melody3, melody3Length);
+          melody3Counter = playNextNote(noteDurations3, melody3Counter, melody3, melody3Length);
+          incrementWhichSong(); // temporary -- remove later when taking user input instead
           break;
       }
-      //delay(10);
+       delay(10);
     }
-
-    // temporary loop used to change songs until we take user input to do this
-    if (whichSong < 3){
-        whichSong++;
-      }
-      else {
-        whichSong = 1;
-      }
 }
