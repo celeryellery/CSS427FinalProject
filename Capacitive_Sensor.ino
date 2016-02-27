@@ -24,13 +24,31 @@ int csOutput(char csColor)
   switch (csColor) 
   {
     case 'R':
-      return cs_RED.capacitiveSensor(0);
+      return cs_RED.capacitiveSensor(30);
       break;
     case 'G':
       return cs_GREEN.capacitiveSensor(30);
       break;
     case 'B':
-      return cs_BLUE.capacitiveSensor(0);
+      return cs_BLUE.capacitiveSensor(30);
+      break;
+  }
+}
+
+int long stepThreshhold = 180;
+
+boolean isSteppedOn(char csColor) 
+{
+  switch (csColor) 
+  {
+    case 'R':
+      return cs_RED.capacitiveSensor(30) > stepThreshhold);
+      break;
+    case 'G':
+      return cs_GREEN.capacitiveSensor(30) > stepThreshhold);
+      break;
+    case 'B':
+      return cs_BLUE.capacitiveSensor(30) > stepThreshhold);
       break;
   }
 }

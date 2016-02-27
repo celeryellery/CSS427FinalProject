@@ -50,14 +50,7 @@ int noteDurations3[] = {4, 8, 8, 8, 8, 8, 8, 4, 8, 8, 2,
 int melody3Length = 41;
 int melody3Counter = 0;
 //-------------------------------------------------------------------------------
-
-int long stepThreshhold = 200;
-
 long csOutput_RED = 0, csOutput_GREEN = 0, csOutput_BLUE = 0;
-
-boolean isSteppedOn(long pressurePlateValue) {
-  return (pressurePlateValue > stepThreshhold);
-}
 
 int playNextNote(int noteDurations[], int melodyCounter, int melody[], int melodyLength) {
       // to calculate the note duration, take one second
@@ -118,8 +111,11 @@ void melodies()
     Serial.print("BLUE: ");
     Serial.println(csOutput_BLUE);
 
+    //tone(8, NOTE_E4, 100);
+    delay(500);
+    
     // If a step is detected, play the next note in the song
-    if (isSteppedOn(csOutput_RED)){
+    if (isSteppedOn(csOutput_GREEN)){
       Serial.println("Stepped on!");
       switch(songArray[whichSong]) { // Will need to change the variable here to take user input
           case 1 : 
