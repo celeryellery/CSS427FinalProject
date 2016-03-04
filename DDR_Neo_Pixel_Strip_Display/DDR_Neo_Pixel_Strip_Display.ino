@@ -25,7 +25,7 @@
 #define NUM_LEDS 30 // how many LEDs are used for the display
 #define UPDATE_INTERVAL 100 // time between updates of light strip in ms
 #define DANCE_MOVE_CREATE_INTERVAL 1000 // ms
-#define MAX_DANCE_MOVES NUM_LEDS / (DANCE_MOVE_CREATE_INTERVAL / UPDATE_INTERVAL) + 1 // maximum number of dance moves at one time
+#define MAX_DANCE_MOVES NUM_LEDS / (DANCE_MOVE_CREATE_INTERVAL / UPDATE_INTERVAL) + 2 // maximum number of dance moves at one time (+1 +1 to account for delay)
 #define DANCE_ZONE_LOWER_BOUND 20 // LED 20
 #define DANCE_ZONE_UPPER_BOUND 23 // LED 23
 #define COLOR_MAX 64 // maximum color value (determines brightness)
@@ -68,6 +68,7 @@ int color[6] = {RED, YELLOW, GREEN, CYAN, BLUE, MAGENTA};
 bool isRedButtonPressed;
 bool isGreenButtonPressed;
 bool isBlueButtonPressed;
+bool gameOver;
 
 const int sensor1pin = 8; // connect the first sensor to pin 8 on the Arduino Mega
 //const int sensor2pin = 8; // connect the first sensor to pin 8 on the Arduino Mega
@@ -75,54 +76,123 @@ const int sensor1pin = 8; // connect the first sensor to pin 8 on the Arduino Me
 //const int sensor4pin = 8; // connect the first sensor to pin 8 on the Arduino Mega
 //const int sensor5pin = 8; // connect the first sensor to pin 8 on the Arduino Mega
 
-// Original Melody--------------------------------------------------------------
-int melody1Code = 1;
-// notes in the melody:
-int melody1[] = {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
+int allSongNotes[7][42] = {
+              {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+              },
+              {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4, 0, 0, 0, 0, 0, 0, 
+               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+              }, 
+              {NOTE_E4, NOTE_D4, NOTE_C4, NOTE_E4, NOTE_D4, NOTE_C4,
+               NOTE_C4, NOTE_C4, NOTE_C4, NOTE_C4,
+               NOTE_D4, NOTE_D4, NOTE_D4, NOTE_D4,
+               NOTE_E4, NOTE_D4, NOTE_C4, 0, 0, 0, 0, 
+               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+               0, 0, 0, 0, 0, 0, 0
+              },
+              {NOTE_A4, NOTE_A4, NOTE_C5, NOTE_D5, NOTE_F5, NOTE_F5, NOTE_D5, 
+               NOTE_C5, NOTE_C5, NOTE_D5, NOTE_C5,
+               NOTE_A4, NOTE_A4, NOTE_C5, NOTE_D5, NOTE_F5, 
+               NOTE_F5, NOTE_D5,
+               NOTE_C5, NOTE_C5, NOTE_D5, NOTE_C5,
+               NOTE_C5, NOTE_C5, NOTE_C5, NOTE_A4, NOTE_C5, 
+               NOTE_D5, NOTE_D5, NOTE_C5, 
+               NOTE_A4, NOTE_A4, NOTE_G4, NOTE_A4, NOTE_C5,
+               NOTE_G4, NOTE_A4,
+               NOTE_F4, NOTE_F4, NOTE_G4, NOTE_F4, 0
+              },  
+              {NOTE_C4, NOTE_C4, NOTE_G4, NOTE_G4, NOTE_A4, NOTE_A4, NOTE_G4,
+               NOTE_F4, NOTE_F4, NOTE_E4, NOTE_E4, NOTE_D4,
+               NOTE_D4, NOTE_C4, 
+               NOTE_G4, NOTE_G4, NOTE_F4, NOTE_F4, NOTE_E4, 
+               NOTE_E4, NOTE_D4,
+               NOTE_G4, NOTE_G4, NOTE_F4, NOTE_F4, NOTE_E4,
+               NOTE_E4, NOTE_D4,
+               NOTE_C4, NOTE_C4, NOTE_G4, NOTE_G4, NOTE_A4,
+               NOTE_A4, NOTE_G4,
+               NOTE_F4, NOTE_F4, NOTE_E4, NOTE_E4, NOTE_D4, 
+               NOTE_D4, NOTE_C4
+              }, 
+              {NOTE_C4, NOTE_D4, NOTE_E4, NOTE_F4, NOTE_G4, NOTE_C5, 
+               NOTE_A4, NOTE_C5, NOTE_G4,
+               NOTE_F4, NOTE_F4, NOTE_G4, NOTE_E4, NOTE_E4, 
+               NOTE_D4, NOTE_D4, NOTE_E4, NOTE_C4,
+               NOTE_C4, NOTE_D4, NOTE_E4, NOTE_F4, NOTE_G4, 
+               NOTE_C5,
+               NOTE_A4, NOTE_C5, NOTE_G4,
+               NOTE_C5, NOTE_A4, NOTE_G4, NOTE_G4, 
+               NOTE_F4, NOTE_E4, NOTE_D4, NOTE_C4, 
+               0, 0, 0, 0, 0, 0, 0
+               }, 
+              { NOTE_E5, NOTE_E5, NOTE_E5, NOTE_C5, NOTE_E5,
+                NOTE_G5, NOTE_G4, 
+                NOTE_C5, NOTE_G4, NOTE_E4, 
+                NOTE_E4, NOTE_A4, NOTE_B4, NOTE_AS4, NOTE_A4, 
+                  NOTE_G4, NOTE_E5, NOTE_G5, NOTE_A5, NOTE_F5, 
+                NOTE_G5, 
+                NOTE_E5, NOTE_C5, NOTE_D5, NOTE_B4, 
+                  NOTE_C5, NOTE_G4, NOTE_E4, 
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+              } 
+};
 
-// note durations: 4 = quarter note, 8 = eighth note, etc.:
-int noteDurations1[] = {4, 8, 8, 4, 4, 4, 4, 4};
 
-int melody1Length = 8;
-int melody1Counter = 0;
-//-------------------------------------------------------------------------------
+int allNoteDurations[7][42] = {
+              {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+              },
+              {4, 8, 8, 4, 4, 4, 4, 4,
+               0, 0, 0, 0, 0, 0, 
+               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+              }, 
+              {4, 4, 2, 4, 4, 2, 
+                             8, 8, 8, 8, 8, 8, 8, 8, 
+                             4, 4, 2,
+               0, 0, 0, 0, 
+               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+               0, 0, 0, 0, 0, 0, 0
+              },
+              {4, 8, 8, 8, 8, 8, 8, 4, 8, 8, 2, 
+               4, 8, 8, 8, 8, 8, 8, 4, 8, 8, 2, 
+               4, 4, 4, 8, 8, 4, 4, 2, 
+               4, 8, 8, 8, 8, 8, 8, 4, 8, 8, 2,
+               0
+              },  
+              {4, 4, 4, 4, 4, 4, 2, 
+                   4, 4, 4, 4, 4, 4, 2, 
+               4, 4, 4, 4, 4, 4, 2,
+               4, 4, 4, 4, 4, 4, 2,
+               4, 4, 4, 4, 4, 4, 2,
+               4, 4, 4, 4, 4, 4, 2
+              }, 
+              {8, 8, 8, 8, 4, 4, 
+               4, 4, 2, 
+               4, 8, 8, 4, 4, 
+               4, 8, 8, 2, 
+               8, 8, 8, 8, 4, 4, 
+               4, 4, 2,
+               4, 8, 8, 8, 4, 
+               4, 4, 2,
+               0, 0, 0, 0, 0, 0, 0
+               }, 
+              {8, 4, 4, 8, 4, 
+               2, 2, 
+               4, 2, 4, 
+               8, 4, 4, 8, 4, 
+               8, 8, 8, 4, 8, 8, 
+               4, 8, 8, 2, 
+               4, 4, 4,
+               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+              } 
+};
 
-// Hot Crossed Buns--------------------------------------------------------------
-int melody2Code = 2;
-int melody2[] =        {NOTE_E4, NOTE_D4, NOTE_C4, NOTE_E4, NOTE_D4, NOTE_C4, 
-                        NOTE_C4, NOTE_C4, NOTE_C4, NOTE_C4, 
-                        NOTE_D4, NOTE_D4, NOTE_D4, NOTE_D4, 
-                        NOTE_E4, NOTE_D4, NOTE_C4};
-// note durations: 4 = quarter note, 8 = eighth note, etc.:
-int noteDurations2[] = {4, 4, 2, 4, 4, 2, 
-                       8, 8, 8, 8, 8, 8, 8, 8, 
-                       4, 4, 2};
-int melody2Length = 17;
-int melody2Counter = 0;
-//-------------------------------------------------------------------------------
-
-// Jasmine Flower----------------------------------------------------------------
-int melody3Code = 2;
-int melody3[] = {NOTE_A4, NOTE_A4, NOTE_C5, NOTE_D5, NOTE_F5, NOTE_F5, NOTE_D5, 
-                       NOTE_C5, NOTE_C5, NOTE_D5, NOTE_C5, 
-                       NOTE_A4, NOTE_A4, NOTE_C5, NOTE_D5, NOTE_F5, NOTE_F5, NOTE_D5, 
-                       NOTE_C5, NOTE_C5, NOTE_D5, NOTE_C5,
-                       NOTE_C5, NOTE_C5, NOTE_C5, NOTE_A4, NOTE_C5, NOTE_D5, NOTE_D5, NOTE_C5, 
-                       NOTE_A4, NOTE_A4, NOTE_G4, NOTE_A4, NOTE_C5, NOTE_G4, NOTE_A4, 
-                       NOTE_F4, NOTE_F4, NOTE_G4, NOTE_F4};
-
-int noteDurations3[] = {4, 8, 8, 8, 8, 8, 8, 4, 8, 8, 2, 
-                         4, 8, 8, 8, 8, 8, 8, 4, 8, 8, 2, 
-                         4, 4, 4, 8, 8, 4, 4, 2, 
-                         4, 8, 8, 8, 8, 8, 8, 4, 8, 8, 2};
-
-int melody3Length = 41;
-int melody3Counter = 0;
-//-------------------------------------------------------------------------------
-
-int long stepThreshholdRed = 3500;
-int long stepThreshholdGreen = 3000;
-int long stepThreshholdBlue = 2200;
+int long stepThreshholdRed = 2400;
+int long stepThreshholdGreen = 2500;
+int long stepThreshholdBlue = 2400;
 
 CapacitiveSensor   cs_green = CapacitiveSensor(4,2);        // 10M resistor between pins 4 & 2, pin 2 is sensor pin, add a wire and or foil if desired
 CapacitiveSensor   cs_red = CapacitiveSensor(13, 12);        // 10M resistor between pins 1 & 0, pin 0 is sensor pin, add a wire and or foil if desired
@@ -134,15 +204,15 @@ long totalred = 0;
 long totalblue = 0;
 //long total4 = 0;
 //long total5 = 0;
-//-----------------------Temporary code to alternate songs until we set things up to take user input instead -------------------------
-int songArray[] = {1, 1, 1, 1, 1, 1, 1, 1, // temporary; just used to switch up which song is next until we take user input for this
-                     2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 
-                     3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 
-                     3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3}; 
+
 int whichSong = 0;
+int songLengths[7] = { 0, 8, 17, 41, 42, 35, 28};
+int melodyCounter;
 
 void setup() 
 {
+  gameOver = false;
+  
   cs_green.set_CS_AutocaL_Millis(0xFFFFFFFF);     // turn off autocalibrate on channel 1 - just as an example
   cs_red.set_CS_AutocaL_Millis(0xFFFFFFFF); 
   cs_blue.set_CS_AutocaL_Millis(0xFFFFFFFF); 
@@ -179,47 +249,177 @@ void setup()
 
 void loop() 
 {
-  int time = millis();
-
-  // constantly monitor the player's input for minimal delay
-  checkPlayerInput();
-  
-  // create a new Dance Move at a regular interval
-  if (time - createDanceMoveTimer > DANCE_MOVE_CREATE_INTERVAL)
-    createDanceMove();
-  
-  // update the strip
-  if (time - updateTimer > UPDATE_INTERVAL)
-  {
-    processPlayerInput();
-    updateStrip();
-  }
+  mainMenu(); // choose which song then start the game
+  Serial.print("Which Song: "); Serial.println(whichSong);
+  playDDR();
 }
+
+// allow the player to choose a song to play
+void mainMenu()
+{
+  displayOptions();
+  getMenuInput(); // sets the isButtonPressed variables
+  whichSong = selectSong(); // chooses the song based on state of isButtonSet(rgb) variables
+}
+
+// show the player which songs can be picked
+void displayOptions()
+{
+  Serial.println("Select one of the following songs to play, by standing on the corresponding pressure plate(s).");
+  Serial.println("Red: Shave and a Haircut");
+  Serial.println("Green: Hot Crossed Buns");
+  Serial.println("Blue: Jasmine Flower");
+  Serial.println("Yellow: Twinkle Twinkle Little Star");
+  Serial.println("Cyan: I'm a Little Teapot");
+  Serial.println("Magenta: Super Mario");
+}
+
+// reads the capacitive sensors for menu input
+void getMenuInput()
+{
+  do
+  {
+    totalgreen =  cs_green.capacitiveSensor(30);
+    delay(250);
+    totalred =  cs_red.capacitiveSensor(30);
+    delay(250);
+    totalblue =  cs_blue.capacitiveSensor(30);
+    delay(250);
+    if (!isRedButtonPressed)
+    {
+      isRedButtonPressed = totalred > stepThreshholdRed;
+      if (isRedButtonPressed)
+        Serial.println("Red stepped on!");
+    }
+    if (!isGreenButtonPressed)
+    {
+      isGreenButtonPressed = totalgreen > stepThreshholdGreen;
+      if (isGreenButtonPressed)
+        Serial.println("Green stepped on!");
+    }
+    if (!isBlueButtonPressed)
+    {
+      isBlueButtonPressed = totalblue > stepThreshholdBlue;
+      if (isBlueButtonPressed)
+        Serial.println("Blue stepped on!");
+    }
+  } while (!(isRedButtonPressed || isGreenButtonPressed || isBlueButtonPressed));
+}
+
+int selectSong() {
+  int melodyCode = 0;
+  
+    uint8_t input = isRedButtonPressed * 2 * 2 + 
+            isGreenButtonPressed * 2 + isBlueButtonPressed;
+  switch (input) {
+    case 4:   // 1 0 0 (red)
+            melodyCode = 1; 
+         break;
+       case 2:   // 0 1 0 (green)
+      melodyCode = 2;   
+         break;
+       case 1:   // 0 0 1 (blue)
+            melodyCode = 3;  
+         break;
+       case 6:   // 1 1 0 (yellow)
+             melodyCode = 4;     
+         break;
+       case 3:   // 0 1 1 (cyan)
+             melodyCode = 5;        
+         break;
+       case 5:   // 1 0 1 (magenta)
+             melodyCode = 6;     
+         break;
+       default:  // 0 0 0
+         break;
+  }
+  return melodyCode;
+}
+
+void playDDR()
+{
+  setupDDR();
+  while (!gameOver)
+  {
+    int time = millis();
+  
+    // constantly monitor the player's input for minimal delay
+    checkPlayerInput();
+    
+    // create a new Dance Move at a regular interval
+    if (time - createDanceMoveTimer > DANCE_MOVE_CREATE_INTERVAL)
+      createDanceMove();
+    
+    // update the strip
+    if (time - updateTimer > UPDATE_INTERVAL)
+    {
+      processPlayerInput();
+      updateStrip();
+    }
+  }
+  // reset the NeoPixel strip
+  for (int i = 0; i < NUM_LEDS; i++)
+    strip.setPixelColor(i, 0, 0, 0);
+  strip.show();
+  delay(5000);
+}
+
+// setup all the variables and pins to play DDR
+void setupDDR() 
+{
+  gameOver = false;
+  initCapacitiveSensor();
+ 
+  pinMode(sensor1pin, OUTPUT);
+  
+  createDanceMoveTimer = millis();
+  updateTimer = millis();
+
+  // initialize player input
+  isRedButtonPressed = false;
+  isGreenButtonPressed = false;
+  isBlueButtonPressed = false;
+  
+  // seed the random function with noise on analog input pin 5
+  randomSeed(analogRead(RANDOM_SEED_PIN));
+
+  // setup the dance strip
+  setupStrip();
+  
+  // initialize danceMoveArray
+  for (int i = 0; i < MAX_DANCE_MOVES; i++)
+     danceMoveArray[i] = NULL; 
+}
+
+void initCapacitiveSensor()                    
+{
+   cs_red.set_CS_AutocaL_Millis(0xFFFFFFFF);     // turn off autocalibrate on channel 1 - just as an example
+   cs_green.set_CS_AutocaL_Millis(0xFFFFFFFF); 
+   cs_blue.set_CS_AutocaL_Millis(0xFFFFFFFF); 
+}
+
 boolean isSteppedOn(long pressurePlateValue) {
   return ((pressurePlateValue > stepThreshholdRed) || 
           (pressurePlateValue > stepThreshholdGreen) || 
           (pressurePlateValue > stepThreshholdBlue));
 }
 
-int playNextNote(int noteDurations[], int melodyCounter, int melody[], int melodyLength) {
+void playNextNote() {
       // to calculate the note duration, take one second
       // divided by the note type.
       //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
-      int noteDuration = 1000 / noteDurations[melodyCounter];
-      tone(sensor1pin, melody[melodyCounter], noteDuration); 
+      int noteDuration = 1000 / allNoteDurations[whichSong][melodyCounter];
+      tone(sensor1pin, allSongNotes[whichSong][melodyCounter], noteDuration); 
   
-      // to distinguish the notes, set a minimum time between them.
-      // the note's duration + 30% seems to work well:
-      int pauseBetweenNotes = noteDuration * 1.30;
-
-      if (melodyCounter < melodyLength){
+      if (melodyCounter < songLengths[whichSong]){
         melodyCounter++;
       }
       else {
         melodyCounter = 0;
+        gameOver = true;
       }
       
-      return melodyCounter;
+      return;
 }
 
 void incrementWhichSong() {
@@ -343,42 +543,42 @@ void processPlayerInput()
          if (danceMoveArray[i]->isSteppedOn(RED))
          {
           Serial.println("Stepped on!");
-          playNextNoteInSong();  
+          playNextNote();  
          }
          break;
        case 2:   // 0 1 0 (green)
          if (danceMoveArray[i]->isSteppedOn(GREEN))
          {
           Serial.println("Stepped on!");
-          playNextNoteInSong();    
+          playNextNote();
          }
          break;
        case 1:   // 0 0 1 (blue)
          if (danceMoveArray[i]->isSteppedOn(BLUE))
          {
           Serial.println("Stepped on!");
-          playNextNoteInSong(); 
+          playNextNote();
          }
          break;
        case 6:   // 1 1 0 (yellow)
          if (danceMoveArray[i]->isSteppedOn(YELLOW))
          {
           Serial.println("Stepped on!");
-          playNextNoteInSong();
+          playNextNote();
          }    
          break;
        case 3:   // 0 1 1 (cyan)
          if (danceMoveArray[i]->isSteppedOn(CYAN))
          {
           Serial.println("Stepped on!");
-          playNextNoteInSong(); 
+          playNextNote();
          }       
          break;
        case 5:   // 1 0 1 (magenta)
          if (danceMoveArray[i]->isSteppedOn(MAGENTA))
          {
           Serial.println("Stepped on!");
-          playNextNoteInSong();    
+          playNextNote();
          }    
          break;
        default:  // 0 0 0
@@ -390,27 +590,6 @@ void processPlayerInput()
   isRedButtonPressed = false;
   isGreenButtonPressed = false;
   isBlueButtonPressed = false;
-}
-
-// plays the next note based on which song is playing
-void playNextNoteInSong()
-{
-    switch(songArray[whichSong]) { // Will need to change the variable here to take user input
-        case 1 : 
-        melody1Counter = playNextNote(noteDurations1, melody1Counter, melody1, melody1Length);
-        incrementWhichSong(); // temporary -- remove later when taking user input instead
-        break;
-  
-        case 2 : 
-        melody2Counter = playNextNote(noteDurations2, melody2Counter, melody2, melody2Length);
-        incrementWhichSong(); // temporary -- remove later when taking user input instead
-        break;
-  
-        case 3 :
-        melody3Counter = playNextNote(noteDurations3, melody3Counter, melody3, melody3Length);
-        incrementWhichSong(); // temporary -- remove later when taking user input instead
-        break;
-      }    
 }
 
 // Input a value 0 to 255 to get a color value.
