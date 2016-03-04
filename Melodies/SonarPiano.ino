@@ -1,6 +1,9 @@
 #include "pitches.h"
 
+//Distance ThreshHold 
 int ThreshHold = 50;
+
+//Full Range of Piezo Frequencies as Pitches
 int Tones[] = {
  NOTE_B0, NOTE_C1,NOTE_CS1, NOTE_D1,NOTE_DS1,
  NOTE_E1, NOTE_F1, NOTE_FS1, NOTE_G1, NOTE_GS1,
@@ -17,34 +20,37 @@ int Tones[] = {
  NOTE_E7,NOTE_F7,NOTE_FS7,NOTE_G7,NOTE_GS7,NOTE_A7, NOTE_AS7,
  NOTE_B7,NOTE_C8,NOTE_CS8,NOTE_D8,NOTE_DS8};
 
- int TonesO4[] = {NOTE_C4,NOTE_CS4,
+//One Octave of Piezo Frequencies as Pitches
+int TonesO4[] = {NOTE_C4,NOTE_CS4,
  NOTE_D4,NOTE_DS4,NOTE_E4,NOTE_F4,NOTE_FS4,NOTE_G4,NOTE_GS4, 
  NOTE_A4, NOTE_AS4,NOTE_B4};
 
- 
+//Length of Array 
 int Len = sizeof(TonesO4)/sizeof(TonesO4[1]);
 
 void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(9600);
+  //Serial.begin(9600);
+  //Setup analog input pin and PWM output pin 
   pinMode(A2, INPUT);
   pinMode(13, OUTPUT);
-  
-  
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
   int inRead = analogRead(A2);
   
+  //Test if input is in distance range
   if(inRead <= ThreshHold)
   {
+    //Map distance to pitch in array
     int mapping = map(inRead, 0, ThreshHold, 0, Len-1);
     tone(13, TonesO4[mapping]); 
+    
+    //delay for sonar update (speed of sound) 
     delay(300);
   }
   else
   {
+    //Cut of output
     noTone(13);
   }
   //delay(400);
