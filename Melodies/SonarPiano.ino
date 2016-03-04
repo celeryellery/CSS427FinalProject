@@ -2,24 +2,6 @@
 /**Distances Corresponding to TonesO4 array values with current settings:
  * 0: 15-16
  * 1: 17-18
- * 2: 19-20
- * 3: 21-22
- * 4: 23-24
- * 5: 25
- * 6: 26-27
- * 7: 28-29
- * 8: 30-31
- * 9: 32-33
- * 10: 34
- * 11: 35
- * 
- * Beware of noise, make sure space is totally cleared
- * and account for slow response and physical limitations
- *
- */
-/**Distances Corresponding to TonesO4 array values with current settings:
- * 0: 15-16
- * 1: 17-18
  * 2: 19
  * 3: 20-21
  * 4: 22
@@ -30,7 +12,11 @@
  * 9: 29-30
  * 10: 31-32
  * 11: 32-33
- * 12: 34-35 */
+ * 12: 34-35 
+ * Beware of noise, make sure space is totally cleared
+ * and account for slow response and physical limitations
+ *
+ */
 
 int ThreshHold_LO = 15;
 int ThreshHold_HI = 35;
