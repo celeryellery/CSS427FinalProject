@@ -1,4 +1,3 @@
-#include "CapacitiveSensor/CapacitiveSensor.h"
 
 #define LED 1
 #define MELODIES 2

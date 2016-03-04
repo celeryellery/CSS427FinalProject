@@ -1,0 +1,6 @@
+Song			KEYWORD1
+getCurrentNote		KEYWORD2
+getCurrentDuration	KEYWORD2
+getLength		KEYWORD2
+getCurrent		KEYWORD2
+popNextNote		KEYWORD2

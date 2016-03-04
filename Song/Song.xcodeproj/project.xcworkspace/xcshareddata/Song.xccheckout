@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>32DE0B99-1834-4956-B40B-E4DA1A10D37C</string>
+	<key>IDESourceControlProjectName</key>
+	<string>Song</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>8BB43AD7F66ABE51B4C6024DAF9D837226B2E2B3</key>
+		<string>https://github.com/celeryellery/CSS427FinalProject.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>Song/Song.xcodeproj</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>8BB43AD7F66ABE51B4C6024DAF9D837226B2E2B3</key>
+		<string>../../..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>https://github.com/celeryellery/CSS427FinalProject.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>8BB43AD7F66ABE51B4C6024DAF9D837226B2E2B3</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>8BB43AD7F66ABE51B4C6024DAF9D837226B2E2B3</string>
+			<key>IDESourceControlWCCName</key>
+			<string>CSS427FinalProject</string>
+		</dict>
+	</array>
+</dict>
+</plist>
