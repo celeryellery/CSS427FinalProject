@@ -1,4 +1,5 @@
 #include "pitches.h"
+
 int ThreshHold = 50;
 int Tones[] = {
  NOTE_B0, NOTE_C1,NOTE_CS1, NOTE_D1,NOTE_DS1,
@@ -15,9 +16,13 @@ int Tones[] = {
  NOTE_A6,NOTE_AS6,NOTE_B6,NOTE_C7,NOTE_CS7,NOTE_D7,NOTE_DS7,
  NOTE_E7,NOTE_F7,NOTE_FS7,NOTE_G7,NOTE_GS7,NOTE_A7, NOTE_AS7,
  NOTE_B7,NOTE_C8,NOTE_CS8,NOTE_D8,NOTE_DS8};
+
+ int TonesO4[] = {NOTE_C4,NOTE_CS4,
+ NOTE_D4,NOTE_DS4,NOTE_E4,NOTE_F4,NOTE_FS4,NOTE_G4,NOTE_GS4, 
+ NOTE_A4, NOTE_AS4,NOTE_B4};
+
  
-int Len = sizeof(Tones)/sizeof(Tones[1]);
-int Note = 0;
+int Len = sizeof(TonesO4)/sizeof(TonesO4[1]);
 
 void setup() {
   // put your setup code here, to run once:
@@ -35,8 +40,8 @@ void loop() {
   if(inRead <= ThreshHold)
   {
     int mapping = map(inRead, 0, ThreshHold, 0, Len-1);
-    tone(13, Tones[mapping]); 
-    delay(400);
+    tone(13, TonesO4[mapping]); 
+    delay(300);
   }
   else
   {
