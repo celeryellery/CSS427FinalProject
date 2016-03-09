@@ -1,17 +1,7 @@
 // -------------------DDR_Neo_Pixel_Strip_Display.ino---------------------------
-// This file was adapted from Adafruit's strandtest.ino.
-// This makes use of a 1-meter 30 NeoPixel strip as a display for DDR.
+// This file implements a DDR-like game with a 1-meter 30 LED NeoPixel display
+// and a piezo buzzer for audio ouput.
 // -----------------------------------------------------------------------------
-/*
- Melodies
- Interactive game that allows players to make notes based on which
- capacitive touch pad they step on. 
- circuit:
- * 8-ohm speaker on digital pin 8
- * 5 capacitive touch sensors and corresponding resistors
- Based on code by Tom Igoe, which can be found here: 
- http://www.arduino.cc/en/Tutorial/Tone
- */
 #include "pitches.h"
 #include <CapacitiveSensor.h>
 
@@ -21,14 +11,13 @@
   #include <avr/power.h>
 #endif
 
-#define PIN 9 // data pin to drive the NeoPixel strip
-#define NUM_LEDS 30 // how many LEDs are used for the display
+// game constants
 #define UPDATE_INTERVAL 100 // time between updates of light strip in ms
 #define DANCE_MOVE_CREATE_INTERVAL 1000 // ms
-#define MAX_DANCE_MOVES NUM_LEDS / (DANCE_MOVE_CREATE_INTERVAL / UPDATE_INTERVAL) + 2 // maximum number of dance moves at one time (+1 +1 to account for delay)
+#define MAX_DANCE_MOVES NUM_LEDS / (DANCE_MOVE_CREATE_INTERVAL / UPDATE_INTERVAL) + 20 // maximum number of dance moves at one time (+1 +1 to account for delay)
 #define DANCE_ZONE_LOWER_BOUND 20 // LED 20
 #define DANCE_ZONE_UPPER_BOUND 23 // LED 23
-#define COLOR_MAX 64 // maximum color value (determines brightness)
+#define DELAY_BEFORE_GAME 2000 // time that the player has to get ready before a song starts (ms)
 
 // player input pins
 #define RED_BUTTON   5
@@ -38,6 +27,16 @@
 // analog input pin for seeding random() with noise
 #define RANDOM_SEED_PIN 5 // A5
 
+// pin for the sound
+const int PIEZO = 8;
+
+const char* songNames[7] = { "", "Shave and a Haircut", "Hot Crossed Buns",
+                           "Jasmine Flower", "Twinkle Twinkle Little Start", 
+                           "I'm a Little Teapot", "Super Mario"
+                         };
+// -----------------------------------------------------------------------------
+// Color Constants
+// -----------------------------------------------------------------------------
 // color wheel values for primary and secondary colors
 #define RED      0
 #define YELLOW   42
@@ -45,6 +44,17 @@
 #define CYAN     115
 #define BLUE     170
 #define MAGENTA  212
+const int color[6] = {RED, YELLOW, GREEN, CYAN, BLUE, MAGENTA};
+#define COLOR_MAX 64 // maximum color value (determines brightness)
+// -----------------------------------------------------------------------------
+// End Color Constants
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// NeoPixel Strip
+// -----------------------------------------------------------------------------
+#define PIN 9 // data pin to drive the NeoPixel strip
+#define NUM_LEDS 30 // how many LEDs are used for the display
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -59,198 +69,86 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800)
 // pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
 // and minimize distance between Arduino and first pixel.  Avoid connecting
 // on a live circuit...if you must, connect GND first.
+// -----------------------------------------------------------------------------
+// End NeoPixel Strip
+// -----------------------------------------------------------------------------
 
+// -----------------------------------------------------------------------------
+// Game Objects, State Variables, and Timers
+// -----------------------------------------------------------------------------
 DanceMove* danceMoveArray[MAX_DANCE_MOVES];
 
 int createDanceMoveTimer;
 int updateTimer;
-int color[6] = {RED, YELLOW, GREEN, CYAN, BLUE, MAGENTA};
+
+// game state variables
+int whichSong = 0;
+bool gameOver;
+// -----------------------------------------------------------------------------
+// End Game Objects, State Variables, and Timers
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// Input Variables
+// -----------------------------------------------------------------------------
 bool isRedButtonPressed;
 bool isGreenButtonPressed;
 bool isBlueButtonPressed;
-bool gameOver;
 
-const int sensor1pin = 8; // connect the first sensor to pin 8 on the Arduino Mega
-//const int sensor2pin = 8; // connect the first sensor to pin 8 on the Arduino Mega
-//const int sensor3pin = 8; // connect the first sensor to pin 8 on the Arduino Mega
-//const int sensor4pin = 8; // connect the first sensor to pin 8 on the Arduino Mega
-//const int sensor5pin = 8; // connect the first sensor to pin 8 on the Arduino Mega
+int previousRedSensorVal;
+int previousGreenSensorVal;
+int previousBlueSensorVal;
+// -----------------------------------------------------------------------------
+// End Input Variables
+// -----------------------------------------------------------------------------
 
-int allSongNotes[7][42] = {
-              {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-              },
-              {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4, 0, 0, 0, 0, 0, 0, 
-               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-              }, 
-              {NOTE_E4, NOTE_D4, NOTE_C4, NOTE_E4, NOTE_D4, NOTE_C4,
-               NOTE_C4, NOTE_C4, NOTE_C4, NOTE_C4,
-               NOTE_D4, NOTE_D4, NOTE_D4, NOTE_D4,
-               NOTE_E4, NOTE_D4, NOTE_C4, 0, 0, 0, 0, 
-               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-               0, 0, 0, 0, 0, 0, 0
-              },
-              {NOTE_A4, NOTE_A4, NOTE_C5, NOTE_D5, NOTE_F5, NOTE_F5, NOTE_D5, 
-               NOTE_C5, NOTE_C5, NOTE_D5, NOTE_C5,
-               NOTE_A4, NOTE_A4, NOTE_C5, NOTE_D5, NOTE_F5, 
-               NOTE_F5, NOTE_D5,
-               NOTE_C5, NOTE_C5, NOTE_D5, NOTE_C5,
-               NOTE_C5, NOTE_C5, NOTE_C5, NOTE_A4, NOTE_C5, 
-               NOTE_D5, NOTE_D5, NOTE_C5, 
-               NOTE_A4, NOTE_A4, NOTE_G4, NOTE_A4, NOTE_C5,
-               NOTE_G4, NOTE_A4,
-               NOTE_F4, NOTE_F4, NOTE_G4, NOTE_F4, 0
-              },  
-              {NOTE_C4, NOTE_C4, NOTE_G4, NOTE_G4, NOTE_A4, NOTE_A4, NOTE_G4,
-               NOTE_F4, NOTE_F4, NOTE_E4, NOTE_E4, NOTE_D4,
-               NOTE_D4, NOTE_C4, 
-               NOTE_G4, NOTE_G4, NOTE_F4, NOTE_F4, NOTE_E4, 
-               NOTE_E4, NOTE_D4,
-               NOTE_G4, NOTE_G4, NOTE_F4, NOTE_F4, NOTE_E4,
-               NOTE_E4, NOTE_D4,
-               NOTE_C4, NOTE_C4, NOTE_G4, NOTE_G4, NOTE_A4,
-               NOTE_A4, NOTE_G4,
-               NOTE_F4, NOTE_F4, NOTE_E4, NOTE_E4, NOTE_D4, 
-               NOTE_D4, NOTE_C4
-              }, 
-              {NOTE_C4, NOTE_D4, NOTE_E4, NOTE_F4, NOTE_G4, NOTE_C5, 
-               NOTE_A4, NOTE_C5, NOTE_G4,
-               NOTE_F4, NOTE_F4, NOTE_G4, NOTE_E4, NOTE_E4, 
-               NOTE_D4, NOTE_D4, NOTE_E4, NOTE_C4,
-               NOTE_C4, NOTE_D4, NOTE_E4, NOTE_F4, NOTE_G4, 
-               NOTE_C5,
-               NOTE_A4, NOTE_C5, NOTE_G4,
-               NOTE_C5, NOTE_A4, NOTE_G4, NOTE_G4, 
-               NOTE_F4, NOTE_E4, NOTE_D4, NOTE_C4, 
-               0, 0, 0, 0, 0, 0, 0
-               }, 
-              { NOTE_E5, NOTE_E5, NOTE_E5, NOTE_C5, NOTE_E5,
-                NOTE_G5, NOTE_G4, 
-                NOTE_C5, NOTE_G4, NOTE_E4, 
-                NOTE_E4, NOTE_A4, NOTE_B4, NOTE_AS4, NOTE_A4, 
-                  NOTE_G4, NOTE_E5, NOTE_G5, NOTE_A5, NOTE_F5, 
-                NOTE_G5, 
-                NOTE_E5, NOTE_C5, NOTE_D5, NOTE_B4, 
-                  NOTE_C5, NOTE_G4, NOTE_E4, 
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-              } 
-};
+// -----------------------------------------------------------------------------
+// Capacitive Sensor Variables
+// -----------------------------------------------------------------------------
+CapacitiveSensor   cs_green = CapacitiveSensor(4,2);
+CapacitiveSensor   cs_red = CapacitiveSensor(13, 12);
+CapacitiveSensor   cs_blue = CapacitiveSensor(11,10);
 
-
-int allNoteDurations[7][42] = {
-              {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-              },
-              {4, 8, 8, 4, 4, 4, 4, 4,
-               0, 0, 0, 0, 0, 0, 
-               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-              }, 
-              {4, 4, 2, 4, 4, 2, 
-                             8, 8, 8, 8, 8, 8, 8, 8, 
-                             4, 4, 2,
-               0, 0, 0, 0, 
-               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-               0, 0, 0, 0, 0, 0, 0
-              },
-              {4, 8, 8, 8, 8, 8, 8, 4, 8, 8, 2, 
-               4, 8, 8, 8, 8, 8, 8, 4, 8, 8, 2, 
-               4, 4, 4, 8, 8, 4, 4, 2, 
-               4, 8, 8, 8, 8, 8, 8, 4, 8, 8, 2,
-               0
-              },  
-              {4, 4, 4, 4, 4, 4, 2, 
-                   4, 4, 4, 4, 4, 4, 2, 
-               4, 4, 4, 4, 4, 4, 2,
-               4, 4, 4, 4, 4, 4, 2,
-               4, 4, 4, 4, 4, 4, 2,
-               4, 4, 4, 4, 4, 4, 2
-              }, 
-              {8, 8, 8, 8, 4, 4, 
-               4, 4, 2, 
-               4, 8, 8, 4, 4, 
-               4, 8, 8, 2, 
-               8, 8, 8, 8, 4, 4, 
-               4, 4, 2,
-               4, 8, 8, 8, 4, 
-               4, 4, 2,
-               0, 0, 0, 0, 0, 0, 0
-               }, 
-              {8, 4, 4, 8, 4, 
-               2, 2, 
-               4, 2, 4, 
-               8, 4, 4, 8, 4, 
-               8, 8, 8, 4, 8, 8, 
-               4, 8, 8, 2, 
-               4, 4, 4,
-               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-              } 
-};
-
-int long stepThreshholdRed = 2400;
-int long stepThreshholdGreen = 2500;
-int long stepThreshholdBlue = 2400;
-
-CapacitiveSensor   cs_green = CapacitiveSensor(4,2);        // 10M resistor between pins 4 & 2, pin 2 is sensor pin, add a wire and or foil if desired
-CapacitiveSensor   cs_red = CapacitiveSensor(13, 12);        // 10M resistor between pins 1 & 0, pin 0 is sensor pin, add a wire and or foil if desired
-CapacitiveSensor   cs_blue = CapacitiveSensor(11,10);        // 10M resistor between pins 6 & 5, pin 5 is sensor pin, add a wire and or foil if desired
+// amount of change between sensor readings to cause a button press event
+int sensorThreshold = 150;
 
 // Create long ints to hold output values of sensors:
 long totalgreen = 0;
 long totalred = 0;
 long totalblue = 0;
-//long total4 = 0;
-//long total5 = 0;
+// -----------------------------------------------------------------------------
+// End Capacitive Sensor Variables
+// -----------------------------------------------------------------------------
 
-int whichSong = 0;
-int songLengths[7] = { 0, 8, 17, 41, 42, 35, 28};
-int melodyCounter;
+// -----------------------------------------------------------------------------
+// Sonar Variables
+// -----------------------------------------------------------------------------
+int ThreshHold_LO = 15;
+int ThreshHold_HI = 35;
 
+int TonesO4[] = {NOTE_C4,NOTE_D5,
+NOTE_E4,NOTE_F5,NOTE_G4,NOTE_A5,NOTE_B4,NOTE_C5,NOTE_D4, 
+NOTE_E5, NOTE_F4,NOTE_G5, NOTE_A4, NOTE_B5};
+
+int Len = sizeof(TonesO4)/sizeof(TonesO4[1]);
+// -----------------------------------------------------------------------------
+// End Sonar Variables
+// -----------------------------------------------------------------------------
 void setup() 
 {
-  gameOver = false;
+  // sonar pins
+  pinMode(A13, INPUT);
+  pinMode(3, OUTPUT); 
   
-  cs_green.set_CS_AutocaL_Millis(0xFFFFFFFF);     // turn off autocalibrate on channel 1 - just as an example
-  cs_red.set_CS_AutocaL_Millis(0xFFFFFFFF); 
-  cs_blue.set_CS_AutocaL_Millis(0xFFFFFFFF); 
-   //cs_10_9.set_CS_AutocaL_Millis(0xFFFFFFFF); 
-   //cs_12_11.set_CS_AutocaL_Millis(0xFFFFFFFF); 
-  // initialize timers
- 
-   pinMode(sensor1pin, OUTPUT);
-   //pinMode(sensor2pin, OUTPUT);
-   //pinMode(sensor3pin, OUTPUT);
-   //pinMode(sensor4pin, OUTPUT);
-   //pinMode(sensor5pin, OUTPUT);
-  
-  createDanceMoveTimer = millis();
-  updateTimer = millis();
-
-  // initialize player input
-  isRedButtonPressed = false;
-  isGreenButtonPressed = false;
-  isBlueButtonPressed = false;
-
   Serial.begin(9600);
-  
-  // seed the random function with noise on analog input pin 5
-  randomSeed(analogRead(RANDOM_SEED_PIN));
-
-  // setup the dance strip
-  setupStrip();
-  
-  // initialize danceMoveArray
-  for (int i = 0; i < MAX_DANCE_MOVES; i++)
-     danceMoveArray[i] = NULL; 
+  setupDDR();
 }
 
 void loop() 
 {
   mainMenu(); // choose which song then start the game
-  Serial.print("Which Song: "); Serial.println(whichSong);
+  Serial.print("\nYou've Chosen: "); Serial.println(songNames[whichSong]);
+  delay(DELAY_BEFORE_GAME); // give player time to get ready for the game
   playDDR();
 }
 
@@ -265,7 +163,7 @@ void mainMenu()
 // show the player which songs can be picked
 void displayOptions()
 {
-  Serial.println("Select one of the following songs to play, by standing on the corresponding pressure plate(s).");
+  Serial.println("\nSelect one of the following songs to play, by standing on the corresponding pressure plate(s).");
   Serial.println("Red: Shave and a Haircut");
   Serial.println("Green: Hot Crossed Buns");
   Serial.println("Blue: Jasmine Flower");
@@ -279,61 +177,43 @@ void getMenuInput()
 {
   do
   {
-    totalgreen =  cs_green.capacitiveSensor(30);
-    delay(250);
-    totalred =  cs_red.capacitiveSensor(30);
-    delay(250);
-    totalblue =  cs_blue.capacitiveSensor(30);
-    delay(250);
-    if (!isRedButtonPressed)
+    int currentTime = millis();
+    // allow for some time tolerance so that two pads can be stepped on "simultaneously"
+    if (currentTime > updateTimer + UPDATE_INTERVAL)
     {
-      isRedButtonPressed = totalred > stepThreshholdRed;
-      if (isRedButtonPressed)
-        Serial.println("Red stepped on!");
-    }
-    if (!isGreenButtonPressed)
-    {
-      isGreenButtonPressed = totalgreen > stepThreshholdGreen;
-      if (isGreenButtonPressed)
-        Serial.println("Green stepped on!");
-    }
-    if (!isBlueButtonPressed)
-    {
-      isBlueButtonPressed = totalblue > stepThreshholdBlue;
-      if (isBlueButtonPressed)
-        Serial.println("Blue stepped on!");
+      checkPlayerInput();
+      updateTimer = millis();
     }
   } while (!(isRedButtonPressed || isGreenButtonPressed || isBlueButtonPressed));
 }
 
-int selectSong() {
-  int melodyCode = 0;
-  
-    uint8_t input = isRedButtonPressed * 2 * 2 + 
-            isGreenButtonPressed * 2 + isBlueButtonPressed;
-  switch (input) {
-    case 4:   // 1 0 0 (red)
-            melodyCode = 1; 
-         break;
-       case 2:   // 0 1 0 (green)
-      melodyCode = 2;   
-         break;
-       case 1:   // 0 0 1 (blue)
-            melodyCode = 3;  
-         break;
-       case 6:   // 1 1 0 (yellow)
-             melodyCode = 4;     
-         break;
-       case 3:   // 0 1 1 (cyan)
-             melodyCode = 5;        
-         break;
-       case 5:   // 1 0 1 (magenta)
-             melodyCode = 6;     
-         break;
-       default:  // 0 0 0
-         break;
+void playSonar()
+{
+  for (;;)
+  {
+    // put your main code here, to run repeatedly:
+    int inRead = analogRead(A13);
+    Serial.print("inRead: "); Serial.println(inRead);
+    /** Test / Debug
+     * Serial.print("Volt/Dist: "); 
+     * Serial.print(inRead);
+     * Serial.println(); */
+    
+    if(inRead >= ThreshHold_LO & inRead <= ThreshHold_HI)
+    {
+      int mapping = map(inRead, ThreshHold_LO, ThreshHold_HI, 0, Len-1);
+      tone(3, TonesO4[mapping]); 
+      delay(300);
+      /** Test / Debug
+       * Serial.print("Mapped Dist: ");
+       * Serial.print(mapping);
+       * Serial.println(); */
+    }
+    else
+    {
+      noTone(3);
+    }
   }
-  return melodyCode;
 }
 
 void playDDR()
@@ -370,7 +250,7 @@ void setupDDR()
   gameOver = false;
   initCapacitiveSensor();
  
-  pinMode(sensor1pin, OUTPUT);
+  pinMode(PIEZO, OUTPUT);
   
   createDanceMoveTimer = millis();
   updateTimer = millis();
@@ -379,6 +259,10 @@ void setupDDR()
   isRedButtonPressed = false;
   isGreenButtonPressed = false;
   isBlueButtonPressed = false;
+
+  previousRedSensorVal = 0;
+  previousGreenSensorVal = 0;
+  previousBlueSensorVal = 0;
   
   // seed the random function with noise on analog input pin 5
   randomSeed(analogRead(RANDOM_SEED_PIN));
@@ -397,41 +281,6 @@ void initCapacitiveSensor()
    cs_green.set_CS_AutocaL_Millis(0xFFFFFFFF); 
    cs_blue.set_CS_AutocaL_Millis(0xFFFFFFFF); 
 }
-
-boolean isSteppedOn(long pressurePlateValue) {
-  return ((pressurePlateValue > stepThreshholdRed) || 
-          (pressurePlateValue > stepThreshholdGreen) || 
-          (pressurePlateValue > stepThreshholdBlue));
-}
-
-void playNextNote() {
-      // to calculate the note duration, take one second
-      // divided by the note type.
-      //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
-      int noteDuration = 1000 / allNoteDurations[whichSong][melodyCounter];
-      tone(sensor1pin, allSongNotes[whichSong][melodyCounter], noteDuration); 
-  
-      if (melodyCounter < songLengths[whichSong]){
-        melodyCounter++;
-      }
-      else {
-        melodyCounter = 0;
-        gameOver = true;
-      }
-      
-      return;
-}
-
-void incrementWhichSong() {
-      // temporary loop used to change songs until we take user input to do this
-    if (whichSong < 66){
-        whichSong++;
-      }
-      else {
-        whichSong = 0;
-      }
-}
-// end temporary code ------------------------------------------------------------------------------------------------------------------
 
 // updates the NeoPixel strip with the new positions of each DanceMove
 void updateStrip()
@@ -494,32 +343,30 @@ void maintainDanceZone()
 // checks for input from the player on each input pin
 void checkPlayerInput()
 {
-  // only take a reading if the button has not been pressed since the last update
-  
-  
     totalgreen =  cs_green.capacitiveSensor(30);
-    Serial.print("ValueG: ");
-    Serial.print(totalgreen);
     totalred =  cs_red.capacitiveSensor(30);
-    Serial.print("\tValueR: ");
-    Serial.print(totalred);
     totalblue =  cs_blue.capacitiveSensor(30);
-    Serial.print("\tValueB: ");
-    Serial.println(totalblue);
+    
+  // check to see if the reading has increased by a certain threshold
+  // since the last reading was taken. This will detect a button
+  // "event" rather than checking for the button to be in a specific state
   if (!isRedButtonPressed)
   {
-    isRedButtonPressed = totalred > stepThreshholdRed;
+    isRedButtonPressed = totalred > previousRedSensorVal + sensorThreshold;
   }
   if (!isGreenButtonPressed)
   {
-    isGreenButtonPressed = totalgreen > stepThreshholdGreen;
+    isGreenButtonPressed = totalgreen > previousGreenSensorVal + sensorThreshold;
   }
   if (!isBlueButtonPressed)
   {
-
-    isBlueButtonPressed = totalblue > stepThreshholdBlue;
+    isBlueButtonPressed = totalblue > previousBlueSensorVal + sensorThreshold;
   }
 
+  // update the previous values to the current values
+  previousRedSensorVal = totalred;
+  previousGreenSensorVal = totalgreen;
+  previousBlueSensorVal = totalblue;
 }
 
 // determines if the players input matches the right instruction at the right time
@@ -541,45 +388,26 @@ void processPlayerInput()
     {
        case 4:   // 1 0 0 (red)
          if (danceMoveArray[i]->isSteppedOn(RED))
-         {
-          Serial.println("Stepped on!");
           playNextNote();  
-         }
          break;
        case 2:   // 0 1 0 (green)
          if (danceMoveArray[i]->isSteppedOn(GREEN))
-         {
-          Serial.println("Stepped on!");
           playNextNote();
-         }
          break;
        case 1:   // 0 0 1 (blue)
          if (danceMoveArray[i]->isSteppedOn(BLUE))
-         {
-          Serial.println("Stepped on!");
           playNextNote();
-         }
          break;
        case 6:   // 1 1 0 (yellow)
          if (danceMoveArray[i]->isSteppedOn(YELLOW))
-         {
-          Serial.println("Stepped on!");
-          playNextNote();
-         }    
+          playNextNote();   
          break;
        case 3:   // 0 1 1 (cyan)
          if (danceMoveArray[i]->isSteppedOn(CYAN))
-         {
-          Serial.println("Stepped on!");
-          playNextNote();
-         }       
+          playNextNote();     
          break;
        case 5:   // 1 0 1 (magenta)
          if (danceMoveArray[i]->isSteppedOn(MAGENTA))
-         {
-          Serial.println("Stepped on!");
-          playNextNote();
-         }    
          break;
        default:  // 0 0 0
          break;
