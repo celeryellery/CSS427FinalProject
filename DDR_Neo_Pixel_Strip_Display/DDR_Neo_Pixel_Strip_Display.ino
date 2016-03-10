@@ -83,6 +83,7 @@ int updateTimer;
 
 // game state variables
 int whichSong = 0;
+int score = 0;
 bool gameOver;
 // -----------------------------------------------------------------------------
 // End Game Objects, State Variables, and Timers
@@ -152,7 +153,7 @@ void loop()
   playDDR();
 }
 
-// allow the player to choose a song to play
+se// allow the player to choose a song to play
 void mainMenu()
 {
   displayOptions();
@@ -248,6 +249,7 @@ void playDDR()
 void setupDDR() 
 {
   gameOver = false;
+  score = 0;
   initCapacitiveSensor();
  
   pinMode(PIEZO, OUTPUT);
@@ -408,6 +410,7 @@ void processPlayerInput()
          break;
        case 5:   // 1 0 1 (magenta)
          if (danceMoveArray[i]->isSteppedOn(MAGENTA))
+          playNextNote();
          break;
        default:  // 0 0 0
          break;
