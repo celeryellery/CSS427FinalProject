@@ -154,9 +154,11 @@ void playNextNote() {
   
       if (melodyCounter < songLengths[whichSong] - 1){
         melodyCounter++;
+        score++;
       }
       else {
         melodyCounter = 0;
+        score = 0;
         gameOver = true;
       }
       

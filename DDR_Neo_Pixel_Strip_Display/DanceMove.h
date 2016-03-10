@@ -18,7 +18,7 @@ class DanceMove
 {
 public:
   DanceMove();    // default constructor
-  DanceMove(int, Adafruit_NeoPixel&, uint8_t, int, int); // constructor with numLEDs parameter
+  DanceMove(int, Adafruit_NeoPixel&, uint8_t, int, int, int&); // constructor with numLEDs parameter
   ~DanceMove();   // destructor
   
   void updateDanceMove();   // moves the DanceMove instruction to the next LED on the strip
@@ -34,6 +34,7 @@ private:
   bool isExpired;      // if the DanceMove has expired
   const uint8_t lowerBound; // lower bound of Dance Zone
   const uint8_t upperBound; // upper bonud of Dance Zone
+  int maximumScore;         // maximum possible points that the player can attain
   
   // utility functions
   void setExpired();

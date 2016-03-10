@@ -84,6 +84,7 @@ int updateTimer;
 // game state variables
 int whichSong = 0;
 int score = 0;
+int maximumScore = 0; // increases whenever a new "DanceMove" is created
 bool gameOver;
 // -----------------------------------------------------------------------------
 // End Game Objects, State Variables, and Timers
@@ -153,7 +154,7 @@ void loop()
   playDDR();
 }
 
-se// allow the player to choose a song to play
+// allow the player to choose a song to play
 void mainMenu()
 {
   displayOptions();
@@ -250,6 +251,7 @@ void setupDDR()
 {
   gameOver = false;
   score = 0;
+  maximumScore = 0;
   initCapacitiveSensor();
  
   pinMode(PIEZO, OUTPUT);
@@ -275,6 +277,12 @@ void setupDDR()
   // initialize danceMoveArray
   for (int i = 0; i < MAX_DANCE_MOVES; i++)
      danceMoveArray[i] = NULL; 
+}
+
+void displayScore()
+{
+   Serial.print("You beat "); Serial.print(songNames[whichSong]); Serial.println("!");
+   Serial.print("Final Score: "); Serial.print(score); Serial.print(" / "); Serial.println(maximumScore);
 }
 
 void initCapacitiveSensor()                    
@@ -310,13 +318,13 @@ void updateStrip()
 void createDanceMove()
 {
    createDanceMoveTimer = millis();
-
+   
    for (int i = 0; i < MAX_DANCE_MOVES; i++)
    {
       if (danceMoveArray[i] == NULL)
       {
          danceMoveArray[i] = new DanceMove(NUM_LEDS, strip, color[(random() % 6)], 
-           DANCE_ZONE_LOWER_BOUND, DANCE_ZONE_UPPER_BOUND);
+           DANCE_ZONE_LOWER_BOUND, DANCE_ZONE_UPPER_BOUND, maximumScore);
          break;
       } 
    } 

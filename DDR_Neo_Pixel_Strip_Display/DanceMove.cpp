@@ -16,7 +16,7 @@
 // -----------------------------------------------------------------------------
 DanceMove::DanceMove() : NUM_LEDS(0), strip(NULL), isExpired(false), 
   danceMovePosition(-1), lowerBound(DEFAULT_LOWER_BOUND), 
-  upperBound(DEFAULT_UPPER_BOUND) { }
+  upperBound(DEFAULT_UPPER_BOUND), maximumScore(0) { }
 
 // -----------------------------------------------------------------------------
 // Default Destructor
@@ -28,12 +28,14 @@ DanceMove::~DanceMove() { }
 // -----------------------------------------------------------------------------
 
 DanceMove::DanceMove(int num, Adafruit_NeoPixel& LEDStrip, uint8_t c, 
-  int lower, int upper) : NUM_LEDS(num), lowerBound(lower), upperBound(upper)
+  int lower, int upper, int& maxScore) : NUM_LEDS(num), lowerBound(lower), 
+  upperBound(upper)
 {
   strip = &LEDStrip;
   danceMovePosition = -1; 
   color = c;
   isExpired = false;
+  maximumScore = maxScore;
 }
 
 // -----------------------------------------------------------------------------
@@ -49,7 +51,7 @@ void DanceMove::updateDanceMove()
      
      // remove DanceMove when it moves past the end of the Neo Pixel strip
      if (danceMovePosition > NUM_LEDS - 1)
-  setExpired();
+       setExpired();
   }
 }
 
@@ -115,6 +117,11 @@ bool DanceMove::isSteppedOn(uint8_t c)
           return true;
        } 
     }
+
+    // this is the first moment that the Dance Move is able to give the player
+    // points, so the maximum possible score will be incremented here
+    if (danceMovePosition == lowerBound)
+      maximumScore++;
     
     return false;
 }
